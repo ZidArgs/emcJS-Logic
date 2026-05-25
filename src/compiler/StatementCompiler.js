@@ -16,38 +16,46 @@ const DEFAULT_TRANSPILERS = new Map(Object.entries({
     "value": (builder, logic) => `(${VAL_STRING}(${builder.escapeValue(logic.ref)})??0)`,
     "state": (builder, logic) => `((${VAL_STRING}(${builder.escapeValue(logic.ref)})??0)==${builder.escapeValue(logic.value)})`,
     "regexp": (builder, logic) => `(/${logic.value}/.test(${builder.buildLogic(logic.content)}))`,
-    "param": (builder, logic) => `(${PARAM_STRING}[${builder.escapeString(logic.ref)}]??0)`,
-    "paramvalue": (builder, logic) => `(${VAL_STRING}(${PARAM_STRING}[${builder.escapeString(logic.ref)}]??"")??0)`,
+    "param": (builder, logic, params) => `(${resolveParam(params, logic.ref)})`,
+    "paramvalue": (builder, logic, params) => `(${VAL_STRING}(${resolveParam(params, logic.ref)})??0)`,
 
     /* operators */
-    "and": (builder, logic) => `${builder.multiElementOperation(logic.content, "&&")}`,
-    "nand": (builder, logic) => `!${builder.multiElementOperation(logic.content, "&&")}`,
-    "or": (builder, logic) => `${builder.multiElementOperation(logic.content, "||")}`,
-    "nor": (builder, logic) => `!${builder.multiElementOperation(logic.content, "||")}`,
-    "not": (builder, logic) => `!(${builder.buildLogic(logic.content)})`,
-    "xor": (builder, logic) => `${builder.twoElementOperation(logic.content, "^") || 1}`,
-    "xnor": (builder, logic) => `!${builder.twoElementOperation(logic.content, "^") || 1}`,
+    "and": (builder, logic, params) => `${builder.multiElementOperation(logic.content, "&&", params)}`,
+    "nand": (builder, logic, params) => `!${builder.multiElementOperation(logic.content, "&&", params)}`,
+    "or": (builder, logic, params) => `${builder.multiElementOperation(logic.content, "||", params)}`,
+    "nor": (builder, logic, params) => `!${builder.multiElementOperation(logic.content, "||", params)}`,
+    "not": (builder, logic, params) => `!(${builder.buildLogic(logic.content, params)})`,
+    "xor": (builder, logic, params) => `${builder.twoElementOperation(logic.content, "^", params) || 1}`,
+    "xnor": (builder, logic, params) => `!${builder.twoElementOperation(logic.content, "^", params) || 1}`,
 
     /* restrictors */
-    "min": (builder, logic) => `(${builder.buildLogic(logic.content)}>=${builder.escapeNumber(logic.value)})`,
-    "max": (builder, logic) => `(${builder.buildLogic(logic.content)}<=${builder.escapeNumber(logic.value)})`,
+    "min": (builder, logic, params) => `(${builder.buildLogic(logic.content, params)}>=${builder.escapeNumber(logic.value)})`,
+    "max": (builder, logic, params) => `(${builder.buildLogic(logic.content, params)}<=${builder.escapeNumber(logic.value)})`,
 
     /* comparators */
-    "eq": (builder, logic) => builder.twoElementOperation(logic.content, "=="),
-    "neq": (builder, logic) => builder.twoElementOperation(logic.content, "!="),
-    "lt": (builder, logic) => builder.twoElementOperation(logic.content, "<"),
-    "lte": (builder, logic) => builder.twoElementOperation(logic.content, "<="),
-    "gt": (builder, logic) => builder.twoElementOperation(logic.content, ">"),
-    "gte": (builder, logic) => builder.twoElementOperation(logic.content, ">="),
+    "eq": (builder, logic, params) => builder.twoElementOperation(logic.content, "==", params),
+    "neq": (builder, logic, params) => builder.twoElementOperation(logic.content, "!=", params),
+    "lt": (builder, logic, params) => builder.twoElementOperation(logic.content, "<", params),
+    "lte": (builder, logic, params) => builder.twoElementOperation(logic.content, "<=", params),
+    "gt": (builder, logic, params) => builder.twoElementOperation(logic.content, ">", params),
+    "gte": (builder, logic, params) => builder.twoElementOperation(logic.content, ">=", params),
 
     /* math */
-    "add": (builder, logic) => builder.mathMultiElementOperation(logic.content, "+"),
-    "sub": (builder, logic) => builder.mathMultiElementOperation(logic.content, "-"),
-    "mul": (builder, logic) => builder.mathMultiElementOperation(logic.content, "*"),
-    "div": (builder, logic) => builder.mathMultiElementOperation(logic.content, "/"),
-    "mod": (builder, logic) => builder.mathMultiElementOperation(logic.content, "%"),
-    "pow": (builder, logic) => builder.mathTwoElementOperation(logic.content, "**")
+    "add": (builder, logic, params) => builder.mathMultiElementOperation(logic.content, "+", params),
+    "sub": (builder, logic, params) => builder.mathMultiElementOperation(logic.content, "-", params),
+    "mul": (builder, logic, params) => builder.mathMultiElementOperation(logic.content, "*", params),
+    "div": (builder, logic, params) => builder.mathMultiElementOperation(logic.content, "/", params),
+    "mod": (builder, logic, params) => builder.mathMultiElementOperation(logic.content, "%", params),
+    "pow": (builder, logic, params) => builder.mathTwoElementOperation(logic.content, "**", params)
 }));
+
+function resolveParam(params, key) {
+    const idx = params.indexOf(key);
+    if (idx >= 0) {
+        return `${PARAM_STRING}[${idx}]??""`;
+    }
+    return `""`;
+}
 
 export default class StatementCompiler {
 
@@ -55,7 +63,7 @@ export default class StatementCompiler {
 
     compile(source, params = []) {
         const builder = new StatementBuilder(this.#transpilers);
-        const statement = builder.buildLogic(source);
+        const statement = builder.buildLogic(source, params);
         return this.createStatement(params, statement, source, builder.dependencies);
     }
 

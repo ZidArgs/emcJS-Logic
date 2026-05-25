@@ -13,9 +13,7 @@ export default class LogicStatement extends Function {
     #source;
 
     constructor(params = [], statement = null, source = {}, dependencies = []) {
-        const paramResolverString = LogicStatement.#createParamResolverString(params);
-
-        super(new.target.parameterString, `${paramResolverString};return ${statement}`);
+        super(new.target.parameterString, `return ${statement}`);
 
         this.#source = immute(source);
         if (Symbol.iterator in Object(dependencies)) {
@@ -38,14 +36,6 @@ export default class LogicStatement extends Function {
         return this.#params;
     }
 
-    get paramNames() {
-        return Object.keys(this.#params);
-    }
-
-    getParamType(name) {
-        return this.#params[name];
-    }
-
     serialize() {
         return {
             logic: this.source,
@@ -53,19 +43,8 @@ export default class LogicStatement extends Function {
         };
     }
 
-    static #createParamResolverString(params) {
-        if (!Array.isArray(params) || !params.length) {
-            return `${PARAM_STRING}={}`;
-        }
-        const result = [];
-        for (const name of params) {
-            result.push(`${name}:${PARAM_STRING}[${result.length}]`);
-        }
-        return `${PARAM_STRING}={${result.join(",")}}`;
-    }
-
     static get parameterString() {
-        return `{${VAL_STRING} = () => false, ${PARAM_STRING} = []} = {}`;
+        return `${VAL_STRING} = () => false, ${PARAM_STRING} = []`;
     }
 
 }

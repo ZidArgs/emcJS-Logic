@@ -10,7 +10,7 @@ export const EXEC_STRING = "exec";
 export default class EdgeStatement extends LogicStatement {
 
     static get parameterString() {
-        return `{${VAL_STRING} = () => false, ${EXEC_STRING} = () => false, ${PARAM_STRING} = []} = {}`;
+        return `${VAL_STRING} = () => false, ${EXEC_STRING} = () => false, ${PARAM_STRING} = []`;
     }
 
 }

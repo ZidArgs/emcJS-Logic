@@ -15,12 +15,12 @@ export default class StatementBuilder {
     }
 
     /* INITIATOR */
-    buildLogic(logic) {
+    buildLogic(logic, params) {
         if (typeof logic != "object") {
             logic = {type: logic};
         }
         if (this.#transpilers.has(logic.type)) {
-            return this.#transpilers.get(logic.type)(this, logic);
+            return this.#transpilers.get(logic.type)(this, logic, params);
         }
         return 0;
     }
@@ -54,15 +54,15 @@ export default class StatementBuilder {
     }
 
     /* ELEMENTS */
-    twoElementOperation(els, join) {
-        return this.multiElementOperation(els.slice(0, 2), join);
+    twoElementOperation(els, join, params) {
+        return this.multiElementOperation(els.slice(0, 2), join, params);
     }
 
-    multiElementOperation(els, join) {
+    multiElementOperation(els, join, params) {
         if (els.length == 0) {
             return 0;
         }
-        return `(${els.map((el) => this.buildLogic(el)).join(join)})`;
+        return `(${els.map((el) => this.buildLogic(el, params)).join(join)})`;
     }
 
     /* MATH */
@@ -78,15 +78,15 @@ export default class StatementBuilder {
         return `(parseInt(${val})||0)`;
     }
 
-    mathTwoElementOperation(els, join) {
-        return this.mathMultiElementOperation(els.slice(0, 2), join);
+    mathTwoElementOperation(els, join, params) {
+        return this.mathMultiElementOperation(els.slice(0, 2), join, params);
     }
 
-    mathMultiElementOperation(els, join) {
+    mathMultiElementOperation(els, join, params) {
         if (els.length == 0) {
             return 0;
         }
-        return `${els.map((el) => this.buildLogic(el)).map(this.toNumber).join(join)}`;
+        return `${els.map((el) => this.buildLogic(el, params)).map(this.toNumber).join(join)}`;
     }
 
 }

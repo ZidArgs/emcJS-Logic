@@ -7,19 +7,19 @@ import {VAL_STRING} from "./statement/LogicStatement.js";
 
 const DEFAULT_TRANSPILERS = {
     /* special */
-    "at": (builder, logic) => logic.content ? `((${VAL_STRING}(${builder.escapeString(logic.node)})||0)&&${builder.buildLogic(logic.content)})` : `(${VAL_STRING}(${builder.escapeString(logic.node)})||0)`,
+    "at": (builder, logic, params) => logic.content ? `((${VAL_STRING}(${builder.escapeString(logic.node)})||0)&&${builder.buildLogic(logic.content, params)})` : `(${VAL_STRING}(${builder.escapeString(logic.node)})||0)`,
     "mixin": (builder, logic) => `${EXEC_STRING}(${builder.escapeString(logic.ref)})`,
-    "function": (builder, logic) => `${EXEC_STRING}(${builder.escapeString(logic.ref)}${functionParams(builder, logic.params)})`
+    "function": (builder, logic, params) => `${EXEC_STRING}(${builder.escapeString(logic.ref)}${functionParams(builder, logic.params, params)})`
 };
 
 /* FUNCTION PARAMS */
-function functionParams(builder, params) {
+function functionParams(builder, params, parentParams) {
     if (!Array.isArray(params)) {
         return ",[]";
     }
     const escapedParams = [];
     for (const value of params) {
-        const buildValue = builder.buildLogic(value);
+        const buildValue = builder.buildLogic(value, parentParams);
         escapedParams.push(buildValue);
     }
     return `,[${escapedParams.join(",")}]`;

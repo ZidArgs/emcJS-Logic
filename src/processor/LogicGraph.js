@@ -2,10 +2,6 @@ import UniqueQueue from "@emcjs/core/data/collection/UniqueQueue.js";
 import AbstractLogger from "@emcjs/core/util/log/AbstractLogger.js";
 import EdgeLogicCompiler from "../compiler/EdgeLogicCompiler.js";
 import NodeFactory from "../util/NodeFactory.js";
-import {
-    PARAM_STRING, VAL_STRING
-} from "../compiler/statement/LogicStatement.js";
-import {EXEC_STRING} from "../compiler/statement/EdgeStatement.js";
 
 export default class LogicGraph {
 
@@ -278,7 +274,7 @@ export default class LogicGraph {
                 return result;
             };
 
-            const execute = (name, params = []) => {
+            const execute = (name, ...params) => {
                 if (this.#mixins.has(name)) {
                     const fn = this.#mixins.get(name);
                     if (this.#debug == "extended") {
@@ -286,11 +282,7 @@ export default class LogicGraph {
                         this.#logger.log(fn.toString());
                         this.#logger.log(`params: [${params.join(", ")}]`);
                     }
-                    const res = fn({
-                        [VAL_STRING]: valueGetter,
-                        [EXEC_STRING]: execute,
-                        [PARAM_STRING]: params
-                    });
+                    const res = fn(valueGetter, execute, ...params);
                     if (this.#debug == "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute mixin { ${name} }`);
@@ -325,10 +317,7 @@ export default class LogicGraph {
                         }
                         continue;
                     }
-                    const cRes = condition({
-                        [VAL_STRING]: valueGetter,
-                        [EXEC_STRING]: execute
-                    });
+                    const cRes = condition(valueGetter, execute);
                     logicCalculationCounter++;
                     if (this.#debug == "extended") {
                         this.#logger.log(`result: ${cRes}`);
