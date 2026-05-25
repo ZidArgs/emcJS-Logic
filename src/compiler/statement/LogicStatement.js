@@ -1,4 +1,8 @@
-import { immute } from "@emcjs/core/data/Immutable.js";
+import {immute} from "@emcjs/core/data/Immutable.js";
+
+export const VAL_STRING = "val";
+
+export const PARAM_STRING = "params";
 
 export default class LogicStatement extends Function {
 
@@ -8,14 +12,10 @@ export default class LogicStatement extends Function {
 
     #source;
 
-    constructor(statement, opts = {}) {
-        const {
-            dependencies = [], params = [], source = {}
-        } = opts;
+    constructor(params = [], statement = null, source = {}, dependencies = []) {
+        const paramResolverString = LogicStatement.#createParamResolverString(params);
 
-        const paramResolverString = LogicStatement.#createParamResolverString();
-
-        super(LogicStatement.parameterString, `${paramResolverString};return ${statement}`);
+        super(new.target.parameterString, `${paramResolverString};return ${statement}`);
 
         this.#source = immute(source);
         if (Symbol.iterator in Object(dependencies)) {
@@ -55,17 +55,17 @@ export default class LogicStatement extends Function {
 
     static #createParamResolverString(params) {
         if (!Array.isArray(params) || !params.length) {
-            return "params={}";
+            return `${PARAM_STRING}={}`;
         }
         const result = [];
         for (const name of params) {
-            result.push(`${name}:params[${result.length}]`);
+            result.push(`${name}:${PARAM_STRING}[${result.length}]`);
         }
-        return `params={${result.join(",")}}`;
+        return `${PARAM_STRING}={${result.join(",")}}`;
     }
 
     static get parameterString() {
-        return "{val = () => false, data = () => false, exec = () => false, at = () => false, params = []} = {}";
+        return `{${VAL_STRING} = () => false, ${PARAM_STRING} = []} = {}`;
     }
 
 }

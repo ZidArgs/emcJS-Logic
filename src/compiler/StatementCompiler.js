@@ -1,171 +1,79 @@
-import { isFunction, isStringNotEmpty } from "@emcjs/core/util/helper/CheckType.js";
-import LogicStatement from "../fn/LogicStatement.js";
+import {
+    isFunction, isStringNotEmpty
+} from "@emcjs/core/util/helper/CheckType.js";
+import LogicStatement, {
+    PARAM_STRING,
+    VAL_STRING
+} from "./statement/LogicStatement.js";
+import StatementBuilder from "./builder/StatementBuilder.js";
 
-const DEFAULT_TRANSPILERS = {
+const DEFAULT_TRANSPILERS = new Map(Object.entries({
     /* literals */
     "true": () => "1",
     "false": () => "0",
-    "string": (logic) => `${escapeString(logic.value)}`,
-    "number": (logic) => `${escapeNumber(logic.value)}`,
-    "value": (logic) => `(val(${escapeValue(logic.ref)})??0)`,
-    "state": (logic) => `((val(${escapeValue(logic.ref)})??0)==${escapeValue(logic.value)})`,
-    "regexp": (logic) => `(/${logic.value}/.test(${buildLogic(logic.content)}))`,
-    "param": (logic) => `(params[${escapeString(logic.ref)}]??0)`,
-    "paramvalue": (logic) => `(val(params[${escapeString(logic.ref)}]??"")??0)`,
+    "string": (builder, logic) => `${builder.escapeString(logic.value)}`,
+    "number": (builder, logic) => `${builder.escapeNumber(logic.value)}`,
+    "value": (builder, logic) => `(${VAL_STRING}(${builder.escapeValue(logic.ref)})??0)`,
+    "state": (builder, logic) => `((${VAL_STRING}(${builder.escapeValue(logic.ref)})??0)==${builder.escapeValue(logic.value)})`,
+    "regexp": (builder, logic) => `(/${logic.value}/.test(${builder.buildLogic(logic.content)}))`,
+    "param": (builder, logic) => `(${PARAM_STRING}[${builder.escapeString(logic.ref)}]??0)`,
+    "paramvalue": (builder, logic) => `(${VAL_STRING}(${PARAM_STRING}[${builder.escapeString(logic.ref)}]??"")??0)`,
 
     /* operators */
-    "and": (logic) => `${multiElementOperation(logic.content, "&&")}`,
-    "nand": (logic) => `!${multiElementOperation(logic.content, "&&")}`,
-    "or": (logic) => `${multiElementOperation(logic.content, "||")}`,
-    "nor": (logic) => `!${multiElementOperation(logic.content, "||")}`,
-    "not": (logic) => `!(${buildLogic(logic.content)})`,
-    "xor": (logic) => `${twoElementOperation(logic.content, "^") || 1}`,
-    "xnor": (logic) => `!${twoElementOperation(logic.content, "^") || 1}`,
+    "and": (builder, logic) => `${builder.multiElementOperation(logic.content, "&&")}`,
+    "nand": (builder, logic) => `!${builder.multiElementOperation(logic.content, "&&")}`,
+    "or": (builder, logic) => `${builder.multiElementOperation(logic.content, "||")}`,
+    "nor": (builder, logic) => `!${builder.multiElementOperation(logic.content, "||")}`,
+    "not": (builder, logic) => `!(${builder.buildLogic(logic.content)})`,
+    "xor": (builder, logic) => `${builder.twoElementOperation(logic.content, "^") || 1}`,
+    "xnor": (builder, logic) => `!${builder.twoElementOperation(logic.content, "^") || 1}`,
 
     /* restrictors */
-    "min": (logic) => `(${buildLogic(logic.content)}>=${escapeNumber(logic.value)})`,
-    "max": (logic) => `(${buildLogic(logic.content)}<=${escapeNumber(logic.value)})`,
+    "min": (builder, logic) => `(${builder.buildLogic(logic.content)}>=${builder.escapeNumber(logic.value)})`,
+    "max": (builder, logic) => `(${builder.buildLogic(logic.content)}<=${builder.escapeNumber(logic.value)})`,
 
     /* comparators */
-    "eq": (logic) => twoElementOperation(logic.content, "=="),
-    "neq": (logic) => twoElementOperation(logic.content, "!="),
-    "lt": (logic) => twoElementOperation(logic.content, "<"),
-    "lte": (logic) => twoElementOperation(logic.content, "<="),
-    "gt": (logic) => twoElementOperation(logic.content, ">"),
-    "gte": (logic) => twoElementOperation(logic.content, ">="),
+    "eq": (builder, logic) => builder.twoElementOperation(logic.content, "=="),
+    "neq": (builder, logic) => builder.twoElementOperation(logic.content, "!="),
+    "lt": (builder, logic) => builder.twoElementOperation(logic.content, "<"),
+    "lte": (builder, logic) => builder.twoElementOperation(logic.content, "<="),
+    "gt": (builder, logic) => builder.twoElementOperation(logic.content, ">"),
+    "gte": (builder, logic) => builder.twoElementOperation(logic.content, ">="),
 
     /* math */
-    "add": (logic) => mathMultiElementOperation(logic.content, "+"),
-    "sub": (logic) => mathMultiElementOperation(logic.content, "-"),
-    "mul": (logic) => mathMultiElementOperation(logic.content, "*"),
-    "div": (logic) => mathMultiElementOperation(logic.content, "/"),
-    "mod": (logic) => mathMultiElementOperation(logic.content, "%"),
-    "pow": (logic) => mathTwoElementOperation(logic.content, "**")
-};
+    "add": (builder, logic) => builder.mathMultiElementOperation(logic.content, "+"),
+    "sub": (builder, logic) => builder.mathMultiElementOperation(logic.content, "-"),
+    "mul": (builder, logic) => builder.mathMultiElementOperation(logic.content, "*"),
+    "div": (builder, logic) => builder.mathMultiElementOperation(logic.content, "/"),
+    "mod": (builder, logic) => builder.mathMultiElementOperation(logic.content, "%"),
+    "pow": (builder, logic) => builder.mathTwoElementOperation(logic.content, "**")
+}));
 
-const dependencies = new Set();
+export default class StatementCompiler {
 
-/* STRINGS */
-function escapeString(str) {
-    if (typeof str != "string") {
-        if (typeof str == "number" && !isNaN(str)) {
-            return `"${str}"`;
-        }
-        return `""`;
-    }
-    const res = str.replace(/[\\"]/g, "\\$&");
-    return `"${res}"`;
-}
-
-/* VALUE */
-function escapeValue(str) {
-    if (typeof str != "string") {
-        if (typeof str == "number") {
-            if (isNaN(str)) {
-                return 0;
-            }
-            return str;
-        }
-        return 0;
-    }
-    const res = str.replace(/[\\"]/g, "\\$&");
-    dependencies.add(res);
-    return `"${res}"`;
-}
-
-/* ELEMENTS */
-function twoElementOperation(els, join) {
-    return multiElementOperation(els.slice(0, 2), join);
-}
-
-function multiElementOperation(els, join) {
-    if (els.length == 0) {
-        return 0;
-    }
-    return `(${els.map(buildLogic).join(join)})`;
-}
-
-/* MATH */
-function escapeNumber(val) {
-    val = parseInt(val);
-    if (!isNaN(val)) {
-        return val;
-    }
-    return 0;
-}
-
-function toNumber(val) {
-    return `(parseInt(${val})||0)`;
-}
-
-function mathTwoElementOperation(els, join) {
-    return mathMultiElementOperation(els.slice(0, 2), join);
-}
-
-function mathMultiElementOperation(els, join) {
-    if (els.length == 0) {
-        return 0;
-    }
-    return `${els.map(buildLogic).map(toNumber).join(join)}`;
-}
-
-/* FUNCTION PARAMS */
-function functionParams(params) {
-    if (!Array.isArray(params)) {
-        return ",[]";
-    }
-    const escapedParams = [];
-    for (const value of params) {
-        const buildValue = buildLogic(value);
-        escapedParams.push(buildValue);
-    }
-    return `,[${escapedParams.join(",")}]`;
-}
-
-// TODO add dependencies wrapper (only allow add and has)
-// TODO call #transpiler with dependency wrapper
-class StatementCompiler {
-
-    #transpilers = new Map();
+    #transpilers = new Map(DEFAULT_TRANSPILERS);
 
     compile(source, params = []) {
-        const statement = this.#buildLogic(source);
-        const fn = new LogicStatement(statement, {
-            dependencies,
-            params,
-            source
-        });
-        dependencies.clear();
-        return fn;
+        const builder = new StatementBuilder(this.#transpilers);
+        const statement = builder.buildLogic(source);
+        return this.createStatement(params, statement, source, builder.dependencies);
     }
 
     registerTranspiler(type, fn) {
         if (!isStringNotEmpty(type)) {
             throw new TypeError("type must  be a non empty string");
         }
-        if (DEFAULT_TRANSPILERS[type] != null) {
-            throw new Error("can not override default transpilers");
-        }
         if (!isFunction(fn)) {
             throw new TypeError("transpiler must be a function");
+        }
+        if (DEFAULT_TRANSPILERS.has(type)) {
+            throw new Error("can not override default transpilers");
         }
         this.#transpilers.set(type, fn);
     }
 
-    /* INITIATOR */
-    #buildLogic(logic) {
-        if (typeof logic != "object") {
-            logic = {type: logic};
-        }
-        if (DEFAULT_TRANSPILERS[logic.type] != null) {
-            return DEFAULT_TRANSPILERS[logic.type](logic);
-        }
-        if (this.#transpilers.has(logic.type)) {
-            return this.#transpilers.get(logic.type)(logic/* , dependencies */);
-        }
-        return 0;
+    createStatement(params, statement, source, dependencies) {
+        return new LogicStatement(params, statement, source, dependencies);
     }
 
 }
-
-export default new StatementCompiler();

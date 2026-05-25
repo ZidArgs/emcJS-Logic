@@ -1,6 +1,6 @@
 {
   "name": "@emcjs/logic",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Modular JS API - Logic Processing",
   "type": "module",
   "repository": {
@@ -14,7 +14,7 @@
   "license": "MIT",
   "homepage": "https://github.com/ZidArgs/emcJS-Logic",
   "dependencies": {
-    "@emcjs/core": "https://github.com/ZidArgs/emcJS-Core.git/#1.0.9"
+    "@emcjs/core": "https://github.com/ZidArgs/emcJS-Core.git/#1.0.11"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
