@@ -1,7 +1,6 @@
 import {debounce} from "@emcjs/core/util/Debouncer.js";
 import EventTargetManager from "@emcjs/core/util/event/EventTargetManager.js";
-import StatementCompiler from "../compiler/StatementCompiler.js";
-import LogicStatement from "../compiler/statement/LogicStatement.js";
+import LogicCompiler from "./LogicCompiler.js";
 
 const EVENTS = [
     "load",
@@ -39,23 +38,11 @@ export default class LogicHandler extends EventTarget {
     }
 
     #init(logic) {
-        if (logic == null) {
-            this.#logic = true;
-            this.#value = true;
-            this.#sourceEventManager.switchTarget();
-        } else if (logic instanceof LogicStatement) {
-            this.#logic = logic;
+        if (typeof logic == "object") {
+            this.#logic = LogicCompiler.compile(logic);
             this.#value = this.#execute();
             this.#sourceEventManager.switchTarget(this.#source);
-        } else if (typeof logic == "object") {
-            this.#logic = StatementCompiler.compile(logic);
-            this.#value = this.#execute();
-            this.#sourceEventManager.switchTarget(this.#source);
-        } else if (typeof logic === "function") {
-            this.#logic = logic;
-            this.#value = !!logic();
-            this.#sourceEventManager.switchTarget();
-        } else {
+        } else if (logic != null) {
             this.#logic = logic;
             this.#value = !!logic;
             this.#sourceEventManager.switchTarget();
@@ -67,13 +54,13 @@ export default class LogicHandler extends EventTarget {
     }
 
     #execute() {
-        return !!this.#logic.execute((key) => {
+        return !!this.#logic((key) => {
             return this.#getValue(key);
         });
     }
 
     #update = debounce(() => {
-        if (this.#logic instanceof LogicStatement) {
+        if (typeof this.#logic == "function") {
             const value = this.#execute();
             if (this.#value != value) {
                 this.#value = value;

@@ -41,9 +41,7 @@ class LogicValidator {
     #validateType(node, noEmpty, path = [], errors = []) {
         const currentType = node["type"];
         switch (currentType) {
-            case "value":
-            case "param":
-            case "paramvalue": {
+            case "value": {
                 if (typeof node["ref"] !== "string") {
                     errors.push(`ref has to be a string [ ${path.join(" > ")} ]`);
                 }
@@ -65,12 +63,6 @@ class LogicValidator {
                 const val = parseInt(node["value"]);
                 if (!isNaN(val)) {
                     errors.push(`value has to be a number [ ${path.join(" > ")} ]`);
-                }
-            } break;
-            case "regexp": {
-                this.#validate(node["content"], noEmpty, path, errors);
-                if (typeof node["value"] !== "string") {
-                    errors.push(`value has to be a string [ ${path.join(" > ")} ]`);
                 }
             } break;
             case "and":
@@ -120,20 +112,9 @@ class LogicValidator {
                     errors.push(`value has to be a number [ ${path.join(" > ")} ]`);
                 }
             } break;
-            case "true":
-            case "false": {
-                // all ok
-            } break;
             default: {
-                if (!this.#customValidators.has(currentType)) {
+                if (currentType !== "true" && currentType !== "false") {
                     errors.push(`unknown type "${currentType}" [ ${path.join(" > ")} ]`);
-                    return;
-                } else {
-                    const validator = this.#customValidators.get(currentType);
-                    const result = validator(node, (node, noEmpty, path, errors) => this.#validate(node, noEmpty, path, errors));
-                    if (typeof result === "string") {
-                        errors.push(`${result} [ ${path.join(" > ")} ]`);
-                    }
                 }
             } break;
         }

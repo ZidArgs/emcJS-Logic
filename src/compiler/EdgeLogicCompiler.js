@@ -1,16 +1,14 @@
-import {
-    isFunction, isStringNotEmpty
-} from "@emcjs/core/util/helper/CheckType.js";
-import StatementCompiler from "./StatementCompiler.js";
+import MapLocker from "@emcjs/core/data/locker/MapLocker.js";
+import StatementCompiler, {DEFAULT_STATEMENT_TRANSPILERS} from "./StatementCompiler.js";
 import EdgeStatement, {EXEC_STRING} from "./statement/EdgeStatement.js";
 import {VAL_STRING} from "./statement/LogicStatement.js";
 
-const DEFAULT_TRANSPILERS = {
+export const DEFAULT_EDGE_TRANSPILERS = new MapLocker(new Map([...DEFAULT_STATEMENT_TRANSPILERS, ...Object.entries({
     /* special */
     "at": (builder, logic, params) => logic.content ? `((${VAL_STRING}(${builder.escapeString(logic.node)})||0)&&${builder.buildLogic(logic.content, params)})` : `(${VAL_STRING}(${builder.escapeString(logic.node)})||0)`,
     "mixin": (builder, logic) => `${EXEC_STRING}(${builder.escapeString(logic.ref)})`,
     "function": (builder, logic, params) => `${EXEC_STRING}(${builder.escapeString(logic.ref)}${functionParams(builder, logic.params, params)})`
-};
+})]));
 
 /* FUNCTION PARAMS */
 function functionParams(builder, params, parentParams) {
@@ -27,27 +25,11 @@ function functionParams(builder, params, parentParams) {
 
 export default class EdgeLogicCompiler extends StatementCompiler {
 
-    constructor() {
-        super();
-        for (const [type, fn] of Object.entries(DEFAULT_TRANSPILERS)) {
-            super.registerTranspiler(type, fn);
-        }
+    static get defaultTranspilers() {
+        return DEFAULT_EDGE_TRANSPILERS;
     }
 
-    registerTranspiler(type, fn) {
-        if (!isStringNotEmpty(type)) {
-            throw new TypeError("type must  be a non empty string");
-        }
-        if (!isFunction(fn)) {
-            throw new TypeError("transpiler must be a function");
-        }
-        if (DEFAULT_TRANSPILERS.has(type)) {
-            throw new Error("can not override default transpilers");
-        }
-        super.registerTranspiler(type, fn);
-    }
-
-    createStatement(params, statement, source, dependencies) {
+    static createStatement(params, statement, source, dependencies) {
         return new EdgeStatement(params, statement, source, dependencies);
     }
 
