@@ -276,13 +276,13 @@ export default class LogicGraph {
 
             const execute = (name, ...params) => {
                 if (this.#mixins.has(name)) {
-                    const fn = this.#mixins.get(name);
+                    const mixin = this.#mixins.get(name);
                     if (this.#debug == "extended") {
                         this.#logger.groupCollapsed(`execute mixin { ${name} }`);
-                        this.#logger.log(fn.toString());
+                        this.#logger.log(mixin.toString());
                         this.#logger.log(`params: [${params.join(", ")}]`);
                     }
-                    const res = fn(valueGetter, execute, ...params);
+                    const res = mixin.execute(valueGetter, execute, ...params);
                     if (this.#debug == "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute mixin { ${name} }`);
@@ -317,7 +317,7 @@ export default class LogicGraph {
                         }
                         continue;
                     }
-                    const cRes = condition(valueGetter, execute);
+                    const cRes = condition.execute(valueGetter, execute);
                     logicCalculationCounter++;
                     if (this.#debug == "extended") {
                         this.#logger.log(`result: ${cRes}`);
