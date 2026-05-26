@@ -27,6 +27,8 @@ export default class LogicGraph {
 
     #forcedReachables = new Set();
 
+    #valueAliases = new Map();
+
     constructor(debug = false) {
         this.#debug = debug;
     }
@@ -212,6 +214,15 @@ export default class LogicGraph {
         this.#forcedReachables.clear();
     }
 
+    setValueAlias(value, logic) {
+        if (logic != null) {
+            const fn = this.#edgeLogicCompiler.compile(logic);
+            this.#valueAliases.set(value, fn);
+        } else {
+            this.#valueAliases.delete(value);
+        }
+    }
+
     setCollectible(target, value) {
         this.#collectibles.set(target, value);
     }
@@ -266,6 +277,14 @@ export default class LogicGraph {
                         this.#logger.log(`get value for { ${key} } (reached):`, 1);
                     }
                     return 1;
+                }
+                if (this.#valueAliases.has(key)) {
+                    const handler = this.#valueAliases.get(key);
+                    const result = handler.execute(valueGetter, execute) ?? 0;
+                    if (this.#debug == "extended") {
+                        this.#logger.log(`get value for { ${key} } - aliased: `, result);
+                    }
+                    return result;
                 }
                 const result = collected.get(key) ?? this.#memoryIn.get(key) ?? 0;
                 if (this.#debug == "extended") {

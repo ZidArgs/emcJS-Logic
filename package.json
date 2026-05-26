@@ -1,6 +1,6 @@
 {
   "name": "@emcjs/logic",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Modular JS API - Logic Processing",
   "type": "module",
   "repository": {
