@@ -217,6 +217,9 @@ export default class LogicGraph {
     setValueAlias(value, logic) {
         if (logic != null) {
             const fn = this.#edgeLogicCompiler.compile(logic);
+            if (fn.dependencies.has(value)) {
+                throw new Error(`value alias circle detected for { ${value} }`);
+            }
             this.#valueAliases.set(value, fn);
         } else {
             this.#valueAliases.delete(value);
@@ -280,9 +283,14 @@ export default class LogicGraph {
                 }
                 if (this.#valueAliases.has(key)) {
                     const handler = this.#valueAliases.get(key);
+                    if (this.#debug == "extended") {
+                        this.#logger.groupCollapsed(`execute value alias handler { ${key} }`);
+                        this.#logger.log(handler.toString());
+                    }
                     const result = handler.execute(valueGetter, execute) ?? 0;
                     if (this.#debug == "extended") {
-                        this.#logger.log(`get value for { ${key} } - aliased: `, result);
+                        this.#logger.log(`result:`, result);
+                        this.#logger.groupEnd(`execute value alias handler { ${key} }`);
                     }
                     return result;
                 }
