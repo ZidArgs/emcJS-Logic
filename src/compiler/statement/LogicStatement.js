@@ -6,16 +6,18 @@ export const PARAM_STRING = "params";
 
 export default class LogicStatement {
 
-    #function;
+    #function = () => 0;
 
     #dependencies = new Set();
 
-    #params;
+    #params = [];
 
-    #source;
+    #source = null;
 
     constructor(params = [], statement = null, source = {}, dependencies = []) {
-        this.#function = new Function(new.target.parameterString, `return ${statement}`);
+        if (statement != null) {
+            this.#function = new Function(new.target.parameterString, `return ${statement}`);
+        }
         this.#source = immute(source);
         if (Symbol.iterator in Object(dependencies)) {
             for (const req of dependencies) {
@@ -54,6 +56,15 @@ export default class LogicStatement {
 
     static get parameterString() {
         return `${VAL_STRING} = () => false, ${PARAM_STRING} = []`;
+    }
+
+    static fromFunction(callback) {
+        if (typeof callback !== "function") {
+            throw new TypeError("callback must be a function");
+        }
+        const inst = new this();
+        inst.#function = callback;
+        return inst;
     }
 
 }

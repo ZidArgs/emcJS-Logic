@@ -1,5 +1,6 @@
 import UniqueQueue from "@emcjs/core/data/collection/UniqueQueue.js";
 import AbstractLogger from "@emcjs/core/util/log/AbstractLogger.js";
+import LogicStatement from "../compiler/statement/LogicStatement.js";
 import EdgeLogicCompiler from "../compiler/EdgeLogicCompiler.js";
 import NodeFactory from "../util/NodeFactory.js";
 
@@ -28,6 +29,8 @@ export default class LogicGraph {
     #forcedReachables = new Set();
 
     #valueAliases = new Map();
+
+    #injectedFunctions = new Map();
 
     constructor(debug = false) {
         this.#debug = debug;
@@ -226,6 +229,16 @@ export default class LogicGraph {
         }
     }
 
+    injectFunction(key, callback) {
+        if (callback instanceof LogicStatement) {
+            this.#injectedFunctions.set(key, callback);
+        } else if (typeof callback === "function") {
+            this.#injectedFunctions.set(key, LogicStatement.fromFunction(callback));
+        } else {
+            this.#injectedFunctions.delete(key);
+        }
+    }
+
     setCollectible(target, value) {
         this.#collectibles.set(target, value);
     }
@@ -302,17 +315,31 @@ export default class LogicGraph {
             };
 
             const execute = (name, ...params) => {
-                if (this.#mixins.has(name)) {
-                    const mixin = this.#mixins.get(name);
+                if (this.#injectedFunctions.has(name)) {
+                    const mixin = this.#injectedFunctions.get(name);
                     if (this.#debug == "extended") {
-                        this.#logger.groupCollapsed(`execute mixin { ${name} }`);
+                        this.#logger.groupCollapsed(`execute injected function { ${name} }`);
                         this.#logger.log(mixin.toString());
                         this.#logger.log(`params: [${params.join(", ")}]`);
                     }
                     const res = mixin.execute(valueGetter, execute, ...params);
                     if (this.#debug == "extended") {
                         this.#logger.log(`result:`, res);
-                        this.#logger.groupEnd(`execute mixin { ${name} }`);
+                        this.#logger.groupEnd(`execute injected function { ${name} }`);
+                    }
+                    return res;
+                }
+                if (this.#mixins.has(name)) {
+                    const mixin = this.#mixins.get(name);
+                    if (this.#debug == "extended") {
+                        this.#logger.groupCollapsed(`execute function { ${name} }`);
+                        this.#logger.log(mixin.toString());
+                        this.#logger.log(`params: [${params.join(", ")}]`);
+                    }
+                    const res = mixin.execute(valueGetter, execute, ...params);
+                    if (this.#debug == "extended") {
+                        this.#logger.log(`result:`, res);
+                        this.#logger.groupEnd(`execute function { ${name} }`);
                     }
                     return res;
                 }
