@@ -1,3 +1,6 @@
+import TypeGenerator from "@emcjs/core/util/type/TypeGenerator.js";
+import TypeValidator from "@emcjs/core/util/type/TypeValidator.js";
+
 class LogicValidator {
 
     #customValidators = new Map();
@@ -141,4 +144,36 @@ class LogicValidator {
 
 }
 
-export default new LogicValidator();
+const logicValidator = new LogicValidator();
+
+export default logicValidator;
+
+TypeValidator.registerCustomValidator("Logic", (value) => {
+    if (typeof value !== "boolean") {
+        if (typeof value !== "object" || Array.isArray(value)) {
+            return ["boolean or logic definition expected"];
+        } else {
+            const logicErrors = logicValidator.validate(value, {allowEmpty: false});
+            if (logicErrors.length > 0) {
+                return logicErrors;
+            }
+        }
+    }
+});
+
+TypeGenerator.registerCustomGenerator("Logic", (currentValue, definition) => {
+    if (typeof currentValue === "boolean") {
+        return currentValue;
+    }
+    if (logicValidator.validate(currentValue, {allowEmpty: false}).length <= 0) {
+        return currentValue;
+    }
+    const defaultValue = definition.default;
+    if (typeof defaultValue === "boolean") {
+        return defaultValue;
+    }
+    if (logicValidator.validate(defaultValue, {allowEmpty: false}).length <= 0) {
+        return defaultValue;
+    }
+    return false;
+});
