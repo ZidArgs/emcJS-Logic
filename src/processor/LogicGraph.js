@@ -131,14 +131,14 @@ export default class LogicGraph {
     }
 
     clearRedirects() {
-        if (this.#debug == "extended") {
+        if (this.#debug === "extended") {
             this.#logger.log("GRAPH LOGIC REDIRECT RESET");
         }
         this.#redirects.clear();
     }
 
     setRedirect(source, target, reroute) {
-        if (this.#debug == "extended") {
+        if (this.#debug === "extended") {
             this.#logger.groupCollapsed("GRAPH LOGIC REDIRECT CHANGE");
             this.#logger.log({[`${source} => ${target}`]: reroute});
             this.#logger.groupEnd("GRAPH LOGIC REDIRECT CHANGE");
@@ -151,14 +151,14 @@ export default class LogicGraph {
     }
 
     setAllRedirects(redirects) {
-        if (this.#debug == "extended") {
+        if (this.#debug === "extended") {
             this.#logger.groupCollapsed("GRAPH LOGIC REDIRECT CHANGE");
         }
         for (const redirect of redirects) {
             const {
                 source, target, reroute
             } = redirect;
-            if (this.#debug == "extended") {
+            if (this.#debug === "extended") {
                 this.#logger.log({[`${source} => ${target}`]: reroute});
             }
             if (reroute == null) {
@@ -167,7 +167,7 @@ export default class LogicGraph {
                 this.#redirects.set(`${source} => ${target}`, `${reroute}`);
             }
         }
-        if (this.#debug == "extended") {
+        if (this.#debug === "extended") {
             this.#logger.groupEnd("GRAPH LOGIC REDIRECT CHANGE");
         }
     }
@@ -268,9 +268,10 @@ export default class LogicGraph {
                 this.#logger.log("input", Object.fromEntries(this.#memoryIn));
                 this.#logger.log("collectibles", Object.fromEntries(this.#collectibles));
                 this.#logger.log("redirects", Object.fromEntries(this.#redirects));
+                this.#logger.log("aliases", [...this.#valueAliases.keys()]);
                 this.#logger.log("forced", Array.from(this.#forcedReachables));
                 this.#logger.log("traverse nodes...");
-                if (this.#debug == "extended") {
+                if (this.#debug === "extended") {
                     this.#logger.groupCollapsed("traversion graph");
                 }
             }
@@ -282,33 +283,33 @@ export default class LogicGraph {
             const collect = (key) => {
                 const value = collected.get(key) ?? this.#memoryIn.get(key) ?? 0;
                 collected.set(key, value + 1);
-                if (this.#debug == "extended") {
+                if (this.#debug === "extended") {
                     this.#logger.log("collected:", key);
                 }
             };
 
             const valueGetter = (key) => {
                 if (allTargets.has(key) && reachableNodes.has(key)) {
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.log(`get value for { ${key} } (reached):`, 1);
                     }
                     return 1;
                 }
                 if (this.#valueAliases.has(key)) {
                     const handler = this.#valueAliases.get(key);
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`execute value alias handler { ${key} }`);
                         this.#logger.log(handler.toString());
                     }
                     const result = handler.execute(valueGetter, execute) ?? 0;
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.log(`result:`, result);
                         this.#logger.groupEnd(`execute value alias handler { ${key} }`);
                     }
                     return result;
                 }
                 const result = collected.get(key) ?? this.#memoryIn.get(key) ?? 0;
-                if (this.#debug == "extended") {
+                if (this.#debug === "extended") {
                     this.#logger.log(`get value for { ${key} }: `, result);
                 }
                 return result;
@@ -317,13 +318,13 @@ export default class LogicGraph {
             const execute = (name, ...params) => {
                 if (this.#injectedFunctions.has(name)) {
                     const mixin = this.#injectedFunctions.get(name);
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`execute injected function { ${name} }`);
                         this.#logger.log(mixin.toString());
                         this.#logger.log(`params: [${params.join(", ")}]`);
                     }
                     const res = mixin.execute(valueGetter, execute, ...params);
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute injected function { ${name} }`);
                     }
@@ -331,13 +332,13 @@ export default class LogicGraph {
                 }
                 if (this.#mixins.has(name)) {
                     const mixin = this.#mixins.get(name);
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`execute function { ${name} }`);
                         this.#logger.log(mixin.toString());
                         this.#logger.log(`params: [${params.join(", ")}]`);
                     }
                     const res = mixin.execute(valueGetter, execute, ...params);
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute function { ${name} }`);
                     }
@@ -359,13 +360,13 @@ export default class LogicGraph {
                 while (counts--) {
                     const edge = queue.dequeue();
                     const condition = edge.getCondition();
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`traverse edge { ${edge} }`);
                         this.#logger.log(condition.toString());
                     }
                     const name = this.getRedirect(edge.getSource().getName(), edge.getTarget().getName());
                     if (reachableNodes.has(name)) {
-                        if (this.#debug == "extended") {
+                        if (this.#debug === "extended") {
                             this.#logger.groupEnd(`traverse edge { ${edge} }`);
                             this.#logger.log(`already reached node { ${name} }`);
                         }
@@ -373,12 +374,12 @@ export default class LogicGraph {
                     }
                     const cRes = condition.execute(valueGetter, execute);
                     logicCalculationCounter++;
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.log(`result: ${cRes}`);
                     }
                     if (cRes) {
                         changed = true;
-                        if (this.#debug == "extended") {
+                        if (this.#debug === "extended") {
                             if (name != edge.getTarget().getName()) {
                                 this.#logger.log(`redirecting edge { ${edge} } to point to { ${name} }`);
                             }
@@ -396,7 +397,7 @@ export default class LogicGraph {
                                 const chName = this.getRedirect(chEdge.getSource().getName(), chEdge.getTarget().getName());
                                 if (!reachableNodes.has(chName)) {
                                     queue.enqueue(chEdge);
-                                    if (this.#debug == "extended") {
+                                    if (this.#debug === "extended") {
                                         this.#logger.log(`adding edge { ${chEdge} } to queue`);
                                     }
                                 }
@@ -404,11 +405,11 @@ export default class LogicGraph {
                         }
                     } else {
                         queue.enqueue(edge);
-                        if (this.#debug == "extended") {
+                        if (this.#debug === "extended") {
                             this.#logger.log(`adding unchanged edge { ${edge} } back to queue`);
                         }
                     }
-                    if (this.#debug == "extended") {
+                    if (this.#debug === "extended") {
                         this.#logger.groupEnd(`traverse edge { ${edge} }`);
                         if (reachableCount != reachableNodes.size) {
                             this.#logger.log("reachable changed", Array.from(reachableNodes));
@@ -431,7 +432,7 @@ export default class LogicGraph {
                 }
             }
             if (this.#debug) {
-                if (this.#debug == "extended") {
+                if (this.#debug === "extended") {
                     this.#logger.groupEnd("traversion graph");
                 }
                 this.#logger.log("success");
