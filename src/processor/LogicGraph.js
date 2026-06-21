@@ -94,39 +94,92 @@ export default class LogicGraph {
 
     setEdge(source, target, value) {
         if (this.#debug) {
-            this.#logger.groupCollapsed("GRAPH LOGIC BUILD");
+            this.#logger.groupCollapsed("GRAPH LOGIC SET EDGE");
             this.#logger.time("build time");
         }
         const node = this.#nodeFactory.get(source);
         const child = this.#nodeFactory.get(target);
         if (typeof value == "undefined" || value == null) {
             node.remove(child);
+            if (this.#debug) {
+                this.#logger.log("removed edge");
+            }
         } else {
             const fn = this.#edgeLogicCompiler.compile(value);
             node.append(child, fn);
+            if (this.#debug) {
+                this.#logger.log(`set edge [${source} => ${target}]`);
+            }
         }
         this.#dirty = true;
         if (this.#debug) {
             this.#logger.timeEnd("build time");
-            this.#logger.groupEnd("GRAPH LOGIC BUILD");
+            this.#logger.groupEnd("GRAPH LOGIC SET EDGE");
         }
     }
 
-    setMixin(name, value) {
+    setFunction(name, value) {
         if (this.#debug) {
-            this.#logger.groupCollapsed("GRAPH LOGIC BUILD");
+            this.#logger.groupCollapsed("GRAPH LOGIC SET FUNCTION");
             this.#logger.time("build time");
         }
         if (typeof value == "undefined" || value == null) {
             this.#mixins.delete(name);
+            if (this.#debug) {
+                this.#logger.log("removed function");
+            }
+        } else if (value.params != null) {
+            const {
+                logic, params
+            } = value;
+            const fn = this.#edgeLogicCompiler.compile(logic, params);
+            this.#mixins.set(name, fn);
+            if (this.#debug) {
+                this.#logger.log(`set function "${name}":`);
+                this.#logger.log(fn.toString());
+            }
         } else {
             const fn = this.#edgeLogicCompiler.compile(value);
             this.#mixins.set(name, fn);
+            if (this.#debug) {
+                this.#logger.log(`set function "${name}":`);
+                this.#logger.log(fn.toString());
+            }
         }
         this.#dirty = true;
         if (this.#debug) {
             this.#logger.timeEnd("build time");
-            this.#logger.groupEnd("GRAPH LOGIC BUILD");
+            this.#logger.groupEnd("GRAPH LOGIC SET FUNCTION");
+        }
+    }
+
+    injectFunction(name, callback) {
+        if (this.#debug) {
+            this.#logger.groupCollapsed("GRAPH LOGIC INJECT FUNCTION");
+            this.#logger.time("build time");
+        }
+        if (callback instanceof LogicStatement) {
+            this.#injectedFunctions.set(name, callback);
+            if (this.#debug) {
+                this.#logger.log(`set injected function "${name}":`);
+                this.#logger.log(callback.toString());
+            }
+        } else if (typeof callback === "function") {
+            const statement = LogicStatement.fromFunction(callback);
+            this.#injectedFunctions.set(name, statement);
+            if (this.#debug) {
+                this.#logger.log(`set injected function "${name}":`);
+                this.#logger.log(statement.toString());
+            }
+        } else {
+            this.#injectedFunctions.delete(name);
+            if (this.#debug) {
+                this.#logger.log("removed injected function");
+            }
+        }
+        if (this.#debug) {
+            this.#logger.timeEnd("build time");
+            this.#logger.groupEnd("GRAPH LOGIC INJECT FUNCTION");
         }
     }
 
@@ -229,16 +282,6 @@ export default class LogicGraph {
         }
     }
 
-    injectFunction(key, callback) {
-        if (callback instanceof LogicStatement) {
-            this.#injectedFunctions.set(key, callback);
-        } else if (typeof callback === "function") {
-            this.#injectedFunctions.set(key, LogicStatement.fromFunction(callback));
-        } else {
-            this.#injectedFunctions.delete(key);
-        }
-    }
-
     setCollectible(target, value) {
         this.#collectibles.set(target, value);
     }
@@ -293,7 +336,7 @@ export default class LogicGraph {
                     if (this.#debug === "extended") {
                         this.#logger.log(`get value for { ${key} } (reached):`, 1);
                     }
-                    return 1;
+                    return true;
                 }
                 if (this.#valueAliases.has(key)) {
                     const handler = this.#valueAliases.get(key);
@@ -301,29 +344,29 @@ export default class LogicGraph {
                         this.#logger.groupCollapsed(`execute value alias handler { ${key} }`);
                         this.#logger.log(handler.toString());
                     }
-                    const result = handler.execute(valueGetter, execute) ?? 0;
+                    const result = handler.execute(valueGetter, execute) ?? false;
                     if (this.#debug === "extended") {
                         this.#logger.log(`result:`, result);
                         this.#logger.groupEnd(`execute value alias handler { ${key} }`);
                     }
                     return result;
                 }
-                const result = collected.get(key) ?? this.#memoryIn.get(key) ?? 0;
+                const result = collected.get(key) ?? this.#memoryIn.get(key) ?? false;
                 if (this.#debug === "extended") {
                     this.#logger.log(`get value for { ${key} }: `, result);
                 }
                 return result;
             };
 
-            const execute = (name, ...params) => {
+            const execute = (name, params) => {
                 if (this.#injectedFunctions.has(name)) {
                     const mixin = this.#injectedFunctions.get(name);
                     if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`execute injected function { ${name} }`);
                         this.#logger.log(mixin.toString());
-                        this.#logger.log(`params: [${params.join(", ")}]`);
+                        this.#logger.log(`params:`, params);
                     }
-                    const res = mixin.execute(valueGetter, execute, ...params);
+                    const res = mixin.execute(valueGetter, execute, params);
                     if (this.#debug === "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute injected function { ${name} }`);
@@ -335,16 +378,16 @@ export default class LogicGraph {
                     if (this.#debug === "extended") {
                         this.#logger.groupCollapsed(`execute function { ${name} }`);
                         this.#logger.log(mixin.toString());
-                        this.#logger.log(`params: [${params.join(", ")}]`);
+                        this.#logger.log(`params:`, params);
                     }
-                    const res = mixin.execute(valueGetter, execute, ...params);
+                    const res = mixin.execute(valueGetter, execute, params);
                     if (this.#debug === "extended") {
                         this.#logger.log(`result:`, res);
                         this.#logger.groupEnd(`execute function { ${name} }`);
                     }
                     return res;
                 }
-                return 0;
+                return false;
             };
 
             /* start traversion */

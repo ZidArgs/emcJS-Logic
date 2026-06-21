@@ -50,7 +50,7 @@ export const DEFAULT_STATEMENT_TRANSPILERS = new MapLocker(new Map(Object.entrie
     "pow": (builder, logic, params) => builder.mathTwoElementOperation(logic.content, "**", params)
 })));
 
-function resolveParam(params, key) {
+function resolveParam(params = [], key = null) {
     const idx = params.indexOf(key);
     if (idx >= 0) {
         return `${PARAM_STRING}[${idx}]??""`;
