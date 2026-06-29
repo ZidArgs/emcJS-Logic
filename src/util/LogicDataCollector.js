@@ -52,7 +52,7 @@ export default class LogicDataCollector extends EventTarget {
         }
         // ---
         this.#storage.clear();
-        this.#storage.setData(logicData);
+        this.#storage.setAll(logicData);
 
         this.#execAugments();
 
@@ -75,7 +75,7 @@ export default class LogicDataCollector extends EventTarget {
         }
 
         if (Object.keys(changes).length > 0) {
-            this.#storage.setData(changes);
+            this.#storage.setAll(changes);
 
             this.#execAugments();
 

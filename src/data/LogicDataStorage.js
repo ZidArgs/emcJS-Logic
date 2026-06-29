@@ -1,77 +1,77 @@
 export default class LogicDataStorage {
 
-    #data = new Map();
+    #baseData = new Map();
 
-    #changes = new Map();
+    #changeData = new Map();
 
-    #augments = new Map();
-
-    setData(data = {}) {
-        for (const [key, value] of Object.entries(data)) {
-            this.#changes.set(key, value);
-        }
-    }
+    #augmentData = new Map();
 
     set(key, value) {
-        this.#changes.set(key, value);
+        this.#changeData.set(key, value);
+    }
+
+    setAll(data = {}) {
+        for (const [key, value] of Object.entries(data)) {
+            this.#changeData.set(key, value);
+        }
     }
 
     get(key) {
-        return this.#changes.get(key) ?? this.#data.get(key);
+        return this.#changeData.get(key) ?? this.#baseData.get(key);
     }
 
-    getPrevious(key) {
-        return this.#data.get(key);
+    getBaseValue(key) {
+        return this.#baseData.get(key);
     }
 
     hasChange(key) {
-        return this.#changes.has(key);
+        return this.#changeData.has(key);
     }
 
     flush() {
-        for (const [key, value] of this.#changes) {
-            this.#data.set(key, value);
+        for (const [key, value] of this.#changeData) {
+            this.#baseData.set(key, value);
         }
-        this.#changes.clear();
+        this.#changeData.clear();
     }
 
     clear() {
-        this.#data.clear();
-        this.#changes.clear();
-        this.#augments.clear();
+        this.#baseData.clear();
+        this.#changeData.clear();
+        this.#augmentData.clear();
     }
 
     // ---
 
     setAugmented(key, value) {
-        this.#augments.set(key, value);
+        this.#augmentData.set(key, value);
     }
 
     deleteAugmented(key) {
-        if (this.#augments.get(key)) {
-            this.#augments.delete(key);
+        if (this.#augmentData.get(key)) {
+            this.#augmentData.delete(key);
         }
     }
 
     getAugmented(key) {
-        return this.#augments.get(key) ?? this.#changes.get(key) ?? this.#data.get(key);
+        return this.#augmentData.get(key) ?? this.#changeData.get(key) ?? this.#baseData.get(key);
     }
 
     clearAugments() {
-        this.#augments.clear();
+        this.#augmentData.clear();
     }
 
     // ---
 
     getAll() {
         const res = {};
-        for (const [key, value] of this.#data) {
+        for (const [key, value] of this.#baseData) {
             res[key] = value;
         }
-        for (const [key, value] of this.#changes) {
+        for (const [key, value] of this.#changeData) {
             res[key] = value;
         }
-        for (const [key, value] of this.#augments) {
+        for (const [key, value] of this.#augmentData) {
             res[key] = value;
         }
         return res;
@@ -79,10 +79,10 @@ export default class LogicDataStorage {
 
     getAllChanges() {
         const res = {};
-        for (const [key, value] of this.#changes) {
+        for (const [key, value] of this.#changeData) {
             res[key] = value;
         }
-        for (const [key, value] of this.#augments) {
+        for (const [key, value] of this.#augmentData) {
             res[key] = value;
         }
         return res;
@@ -90,7 +90,7 @@ export default class LogicDataStorage {
 
     getAllAugments() {
         const res = {};
-        for (const [key, value] of this.#augments) {
+        for (const [key, value] of this.#augmentData) {
             res[key] = value;
         }
         return res;
@@ -102,10 +102,13 @@ export default class LogicDataStorage {
         return {
             hasChange: this.hasChange.bind(this),
             get: this.get.bind(this),
-            getPrevious: this.getPrevious.bind(this),
+            getBaseValue: this.getBaseValue.bind(this),
             setAugmented: this.setAugmented.bind(this),
             deleteAugmented: this.deleteAugmented.bind(this),
-            getAugmented: this.getAugmented.bind(this)
+            getAugmented: this.getAugmented.bind(this),
+            getAll: this.getAll.bind(this),
+            getAllChanges: this.getAllChanges.bind(this),
+            getAllAugments: this.getAllAugments.bind(this)
         };
     }
 
