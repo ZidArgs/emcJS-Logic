@@ -1,14 +1,14 @@
 import {
     isFunction, isStringNotEmpty
 } from "@emcjs/core/util/helper/CheckType.js";
-import MapLocker from "@emcjs/core/data/locker/MapLocker.js";
+import MapView from "@emcjs/core/data/view/MapView.js";
 import LogicStatement, {
     PARAM_STRING,
     VAL_STRING
 } from "./statement/LogicStatement.js";
 import StatementBuilder from "./builder/StatementBuilder.js";
 
-export const DEFAULT_STATEMENT_TRANSPILERS = new MapLocker(new Map(Object.entries({
+export const DEFAULT_STATEMENT_TRANSPILERS = new MapView(new Map(Object.entries({
     /* literals */
     "true": () => "1",
     "false": () => "0",

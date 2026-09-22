@@ -1,9 +1,9 @@
-import MapLocker from "@emcjs/core/data/locker/MapLocker.js";
+import MapView from "@emcjs/core/data/view/MapView.js";
 import StatementCompiler, {DEFAULT_STATEMENT_TRANSPILERS} from "./StatementCompiler.js";
 import EdgeStatement, {EXEC_STRING} from "./statement/EdgeStatement.js";
 import {VAL_STRING} from "./statement/LogicStatement.js";
 
-export const DEFAULT_EDGE_TRANSPILERS = new MapLocker(new Map([...DEFAULT_STATEMENT_TRANSPILERS, ...Object.entries({
+export const DEFAULT_EDGE_TRANSPILERS = new MapView(new Map([...DEFAULT_STATEMENT_TRANSPILERS, ...Object.entries({
     /* special */
     "at": (builder, logic, params) => logic.content ? `((${VAL_STRING}(${builder.escapeString(logic.node)})||0)&&${builder.buildLogic(logic.content, params)})` : `(${VAL_STRING}(${builder.escapeString(logic.node)})||0)`,
     "mixin": (builder, logic) => `${EXEC_STRING}(${builder.escapeString(logic.ref)})`,
